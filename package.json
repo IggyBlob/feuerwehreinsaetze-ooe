@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "name": "big-data-visualization",
+  "version": "1.0.0",
+  "description": "Submission for the Big Data Visualization (BDV) lab project at the University of Applied Sciences Upper Austria.",
+  "scripts": {
+    "start": "http-server"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "http-server": "^0.12.3"
+  }
+}
