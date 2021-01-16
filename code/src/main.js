@@ -13,6 +13,52 @@ d3.csv('data/sample.csv')
         console.error('Error loading the data', error);
     });
 
+d3.json("src/bezirke_95_topo.json")
+    .then(topology => {
+        createMap(topology);
+    })
+    .catch(error => {
+        console.error('Error loading the topology data', error);
+    });
+
+function createMap(topology) {
+    const width = 900;
+    const height = 600;
+
+    const geoData = topojson.feature(topology, {
+        type: "GeometryCollection",
+        geometries: topology.objects.bezirke.geometries
+    });
+
+    const projection = d3.geoMercator()
+        .fitSize([width, height], geoData);
+
+    const path = d3.geoPath()
+        .projection(projection);
+
+    const color = d3.scaleQuantize([401, 418], d3.schemeReds[6])
+
+    const svg = d3.select('#map')
+        .attr('height', height)
+        .attr('width', width);
+
+    svg.append("g")
+        .selectAll('.county')
+        .data(geoData.features)
+        .enter()
+        .append('path')
+        .classed('.county', true)
+        .attr("fill", d => color(Number(d.properties.iso))) // TODO: add proper coloring metric (https://observablehq.com/@d3/state-choropleth)
+        .attr('d', path);
+
+    svg.append('path')
+        .datum(topojson.mesh(topology, topology.objects.bezirke, (a, b) => a !== b ))
+        .attr("fill", "none")
+        .attr("stroke", "white")
+        .attr("stroke-linejoin", "round")
+        .attr("d", path);
+}
+
 /**
  * Create a table with the given columns as table header
  * @param {string[]} columns Array with the column names
