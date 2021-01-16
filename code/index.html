@@ -12,8 +12,52 @@
 
     <!-- include D3 library -->
     <script src="./web_modules/d3/dist/d3.min.js"></script>
+    <!-- map -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.js"></script>
     <!-- include the main script -->
     <script src="./src/main.js" defer async></script>
+
+    <svg id="map"></svg>
+
+    <script type="text/javascript">
+        var width = 900;
+        var height = 600;
+
+        d3.json("src/bezirke_95_topo.json").then(topology => {
+            var geoData = topojson.feature(topology, {
+                type:"GeometryCollection",
+                geometries: topology.objects.bezirke.geometries
+            })
+
+            var projection = d3.geoMercator()
+                .fitSize([width, height], geoData)
+
+            var path = d3.geoPath()
+                .projection(projection)
+
+            const color = d3.scaleQuantize([401, 418], d3.schemeReds[6])
+
+            const svg = d3.select('#map')
+                .attr('height', height)
+                .attr('width', width);
+
+            svg.append("g")
+                .selectAll('.county')
+                .data(geoData.features)
+                .enter()
+                .append('path')
+                .classed('.county', true)
+                .attr("fill", d => color(Number(d.properties.iso))) // TODO: add proper coloring metric (https://observablehq.com/@d3/state-choropleth)
+                .attr('d', path);
+
+            svg.append('path')
+                .datum(topojson.mesh(topology, topology.objects.bezirke, (a, b) => a !== b ))
+                .attr("fill", "none")
+                .attr("stroke", "white")
+                .attr("stroke-linejoin", "round")
+                .attr("d", path);
+        });
+    </script>
 </body>
 
 </html>
