@@ -8,8 +8,36 @@
 </head>
 
 <body>
+    <header>
+        <div class="heading">
+            <h1>Feuerwehreinsätze OÖ</h1>
+            <h2>Jänner 2020 &mdash; Oktober 2020</h2>
+        </div>
+        <div class="dropdown">
+            <select id="month">
+                <option value="1">Jänner 2020</option>
+                <option value="2">Februar 2020</option>
+                <option value="3">März 2020</option>
+                <option value="4">April 2020</option>
+                <option value="5">Mai 2020</option>
+                <option value="6">Juni 2020</option>
+                <option value="7">Juli 2020</option>
+                <option value="8">August 2020</option>
+                <option value="9">September 2020</option>
+                <option value="10">Oktober 2020</option>
+            </select>
+        </div>
+    </header>
 
-    <svg id="map"></svg>
+    <section id="map-section">
+        <svg id="map"></svg>
+    </section>
+
+    <hr/>
+
+    <section id="chart-section">
+        <!-- TODO: add detail charts -->
+    </section>
 
     <!-- include D3 library -->
     <script src="./web_modules/d3/dist/d3.min.js"></script>

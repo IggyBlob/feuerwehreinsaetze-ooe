@@ -3,3 +3,55 @@ html {
     line-height: 1.4;
     font-family: sans-serif;
 }
+
+html, body {
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+body > * {
+    width: 1500px;
+    padding: 30px 10px;
+}
+
+header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.heading h1, .heading h2 {
+    margin: 0;
+}
+
+.dropdown {
+    display: flex;
+    align-items: center;
+}
+
+.dropdown > select {
+    height: 30px;
+    width: 150px;
+}
+
+#map-section {
+    display: flex;
+}
+
+#map {
+    margin: 0 auto;
+}
+
+hr {
+    display: block;
+    height: 1px;
+    border: 0;
+    border-top: 1px solid #ccc;
+}
