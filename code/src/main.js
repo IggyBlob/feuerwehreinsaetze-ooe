@@ -1,25 +1,64 @@
 // store main element for later
 const visElement = d3.select('#vis');
 
-/**
- * Load sample data and update a table
- */
-d3.csv('data/sample.csv')
-    .then((data) => { // wait until loading has finished, then ...
-        const table = createTable(data.columns);
-        updateTableRows(table, data);
-    })
-    .catch((error) => {
-        console.error('Error loading the data', error);
-    });
+const state = {
+    alarmsData: [],
+    brigadesData: [],
+    month: 1
+};
 
-d3.json("src/bezirke_95_topo.json")
+function parseDate(dateString) {
+    return moment(dateString, "dd.MM.YYYY HH:mm", "Europe/Vienna");
+}
+
+const districtPromise = d3.json("data/bezirke_95_topo.json")
     .then(topology => {
         createMap(topology);
     })
     .catch(error => {
         console.error('Error loading the topology data', error);
     });
+
+const alarmsPromise = d3.dsv(";", "data/alarms-splitted.csv")
+    .then(parsed => {
+        state.alarmsData = parsed.map(row => {
+            row.alarmId = parseInt(row.alarmId);
+            row.districtNo = parseInt(row.districtNo);
+            row.alarmLevel = parseInt(row.alarmLevel)
+            row.brigadeCount = parseInt(row.brigadeCount)
+            row.latitude = parseFloat(row.latitude)
+            row.longitude = parseFloat(row.longitude)
+            row.alarmStart = parseDate(row.alarmStart);
+            row.alarmEnd = parseDate(row.alarmEnd);
+
+            return row;
+        });
+    })
+    .catch(error => {
+        console.error('Error loading the alarms data', error);
+    });
+
+const brigadePromise = d3.dsv(";", "data/brigades-splitted.csv")
+    .then(parsed => {
+        state.brigadesData = parsed.map(row => {
+            row.brigadeId = parseInt(row.brigadeId);
+            row.callStart = parseDate(row.callStart);
+            row.callEnd = parseDate(row.callEnd);
+
+            return row;
+        });
+    })
+    .catch(error => {
+        console.error('Error loading the brigades data', error);
+    });
+
+Promise.all([districtPromise, alarmsPromise, brigadePromise])
+    .then(_ => updateApp());
+
+d3.select("#month").on("change", function () {
+    state.month = parseInt(d3.select(this).property("value"));
+    updateApp();
+});
 
 function createMap(topology) {
     const width = 900;
@@ -52,47 +91,27 @@ function createMap(topology) {
         .attr('d', path);
 
     svg.append('path')
-        .datum(topojson.mesh(topology, topology.objects.bezirke, (a, b) => a !== b ))
+        .datum(topojson.mesh(topology, topology.objects.bezirke, (a, b) => a !== b))
         .attr("fill", "none")
         .attr("stroke", "white")
         .attr("stroke-linejoin", "round")
         .attr("d", path);
 }
 
-/**
- * Create a table with the given columns as table header
- * @param {string[]} columns Array with the column names
- */
-function createTable(columns) {
-    const table = visElement.append('table');
-    table.html(`<thead></thead><tbody></tbody>`);
-
-    const tableHead = table.select('thead').append('tr');
-
-    // add a table head cell for each item in the column array
-    tableHead.selectAll('th')
-        .data(columns)
-        .join('th')
-        .text((d) => d);
-
-    return table;
+function updateApp() {
+    const filteredAlarms = filterAlarmsData();
+    const filteredBrigades = filterBrigadesData();
+    console.log("asdf");
 }
 
-/**
- * Add new table rows for the given data
- * @param {d3.select} table D3 selection of the table element
- * @param {array} data Loaded data as array
- */
-function updateTableRows(table, data) {
-    // add a table row for each item in the dataset
-    const tr = table.select('tbody')
-        .selectAll('tr')
-        .data(data, (d) => d.fruit) // use the property `fruit` as unique key
-        .join('tr');
-        // ... add further tr attributes and css classes
+function filterAlarmsData() {
+    return state.alarmsData.filter(alarm => {
+      return alarm.alarmStart.month() + 1 === state.month
+    });
+}
 
-    tr.selectAll('td') // add a table cell for each property (i.e., column) in an item
-        .data((d) => Object.values(d)) // `Object.values(d)` returns all property values of `d` as array
-        .join('td')
-        .text((d) => d);
+function filterBrigadesData() {
+    return state.brigadesData.filter(brigade => {
+        return brigade.callStart.month() + 1 === state.month
+    });
 }
