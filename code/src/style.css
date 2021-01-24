@@ -54,4 +54,25 @@ hr {
     height: 1px;
     border: 0;
     border-top: 1px solid #ccc;
+    padding: 0;
+}
+
+#chart-section {
+    display: flex;
+    justify-content: space-between;
+}
+
+.chart-wrapper {;
+    width: calc(100% / 4.3);
+    text-align: center;
+}
+
+.chart-wrapper h3 {;
+    height: 60px;
+    margin: 0 0 10px 0;
+}
+
+.chart {
+    height: 300px;
+    background-color: #cccccc;
 }
