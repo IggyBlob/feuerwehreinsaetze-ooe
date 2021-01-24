@@ -1,7 +1,8 @@
 // store main element for later
-const visElement = d3.select('#vis');
+const mapElement = d3.select('#map');
 
 const state = {
+    topology: [],
     alarmsData: [],
     brigadesData: [],
     month: 1
@@ -13,7 +14,7 @@ function parseDate(dateString) {
 
 const districtPromise = d3.json("data/bezirke_95_topo.json")
     .then(topology => {
-        createMap(topology);
+        state.topology = topology;
     })
     .catch(error => {
         console.error('Error loading the topology data', error);
@@ -60,7 +61,14 @@ d3.select("#month").on("change", function () {
     updateApp();
 });
 
-function createMap(topology) {
+function createMap(filteredAlarms) {
+    // remove existing paths
+    mapElement.selectAll("g").remove();
+
+    let groupedAlarms = groupAlarmsByDistrict(filteredAlarms);
+
+    let topology = state.topology;
+
     const width = 900;
     const height = 600;
 
@@ -75,9 +83,11 @@ function createMap(topology) {
     const path = d3.geoPath()
         .projection(projection);
 
-    const color = d3.scaleQuantize([401, 418], d3.schemeReds[6])
+    const color = d3.scaleLinear()
+        .domain([Math.min(...groupedAlarms.values()), Math.max(...groupedAlarms.values())])
+        .range(["#fee5d9", "#a50f15"]);
 
-    const svg = d3.select('#map')
+    const svg = mapElement
         .attr('height', height)
         .attr('width', width);
 
@@ -87,7 +97,7 @@ function createMap(topology) {
         .enter()
         .append('path')
         .classed('.county', true)
-        .attr("fill", d => color(Number(d.properties.iso))) // TODO: add proper coloring metric (https://observablehq.com/@d3/state-choropleth)
+        .attr("fill", d => color(Number(groupedAlarms.get(d.properties.name))))
         .attr('d', path);
 
     svg.append('path')
@@ -98,15 +108,30 @@ function createMap(topology) {
         .attr("d", path);
 }
 
+function groupAlarmsByDistrict(alarms) {
+    const map = new Map();
+    alarms.forEach(item => {
+        const key = item.district;
+        const value = map.get(key);
+        if (!value) {
+            map.set(key, 1);
+        } else {
+            map.set(key, value + 1);
+        }
+    });
+    return map;
+}
+
 function updateApp() {
     const filteredAlarms = filterAlarmsData();
     const filteredBrigades = filterBrigadesData();
-    console.log("asdf");
+
+    createMap(filteredAlarms);
 }
 
 function filterAlarmsData() {
     return state.alarmsData.filter(alarm => {
-      return alarm.alarmStart.month() + 1 === state.month
+        return alarm.alarmStart.month() + 1 === state.month
     });
 }
 
