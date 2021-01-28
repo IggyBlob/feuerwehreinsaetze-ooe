@@ -74,5 +74,18 @@ hr {
 
 .chart {
     height: 300px;
-    background-color: #cccccc;
+    background-color: #ececec;
+}
+
+rect {
+    fill: chocolate;
+    fill-opacity: 0.8;
+}
+
+rect:hover {
+    fill-opacity: 1;
+}
+
+#alarmTypeHistogram {
+    margin-left: -152px;
 }
