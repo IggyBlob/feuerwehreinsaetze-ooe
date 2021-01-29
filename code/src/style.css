@@ -43,10 +43,29 @@ header {
 
 #map-section {
     display: flex;
+    flex-direction: column;
 }
 
 #map {
     margin: 0 auto;
+}
+
+.district:hover {
+    fill: #a50f15;
+    cursor: pointer;
+}
+
+#district-indicator {
+    margin-top: 30px;
+    text-align: center;
+}
+
+#district {
+    font-weight: bold;
+}
+
+#resetDistrictLink {
+    display: none;
 }
 
 hr {

@@ -5,7 +5,8 @@ const state = {
     topology: [],
     alarmsData: [],
     brigadesData: [],
-    month: 1
+    month: 1,
+    district: undefined
 };
 
 function parseDate(dateString) {
@@ -82,6 +83,7 @@ function createMap(filteredAlarms) {
             max = Math.max(max, value.length);
         }
 
+        min = groupedAlarms.size > 1 ? min : 0;
         return {min, max};
     }
 
@@ -125,8 +127,15 @@ function createMap(filteredAlarms) {
         .enter()
         .append('path')
         .classed('district', true)
-        .attr("fill", d => color(Number(groupedAlarms.get(d.properties.name).length)))
-        .attr('d', path);
+        .attr("fill", d => {
+            const alarmsOfDistrict = groupedAlarms.get(d.properties.name);
+            return color(Number(alarmsOfDistrict ? alarmsOfDistrict.length : 0))
+        })
+        .attr('d', path)
+        .on("click", (x, d) => {
+            state.district = d.properties.name;
+            updateApp();
+        });
 
     // smoother corners
     svg.append('path')
@@ -142,7 +151,8 @@ function createMap(filteredAlarms) {
         .enter()
         .append("circle")
         .classed('pin', true)
-        .attr("r", 2)
+        .attr("fill", "#1c1c1c")
+        .attr("r", 1.5)
         .attr("transform", (d) =>
             "translate(" + projection([
                 d.longitude,
@@ -291,12 +301,15 @@ function groupAlarmsByDistrict(alarms) {
 
 function updateApp() {
     const filteredAlarms = filterAlarmsData();
-    const filteredBrigades = filterBrigadesData();
+    const filteredBrigades = filterBrigadesData(filteredAlarms);
 
     const topAlarmTypes = groupByKey(filteredAlarms, a => a.alarmType, 10, true);
     const mostActiveBrigades = groupByKey(filteredBrigades, b => b.name, 10, true);
     const avgCallDuration = groupAverageCallDurationByAlarmType(filteredAlarms, 20, true);
     const alarmsPerDay = groupByKey(filteredAlarms, a => a.alarmStart.startOf("day").toISOString(), 31, false);
+
+    document.getElementById("district").innerHTML = state.district ? state.district : "alle";
+    document.getElementById("resetDistrictLink").style.display = state.district ? "inline-block" : "none";
 
     createMap(filteredAlarms);
     alarmTypeBarChart(topAlarmTypes);
@@ -306,15 +319,15 @@ function updateApp() {
 }
 
 function filterAlarmsData() {
-    return state.alarmsData.filter(alarm => {
-        return alarm.alarmStart.month() + 1 === state.month
-    });
+    return state.alarmsData
+        .filter(alarm => alarm.alarmStart.month() + 1 === state.month)
+        .filter(alarm => state.district ? alarm.district === state.district : true);
 }
 
-function filterBrigadesData() {
-    return state.brigadesData.filter(brigade => {
-        return brigade.callStart.month() + 1 === state.month
-    });
+function filterBrigadesData(alarms) {
+    return state.brigadesData
+        .filter(brigade => brigade.callStart.month() + 1 === state.month)
+        .filter(brigade => state.district ? alarms.some(a => a.alarmNr === brigade.alarmNr) : true);
 }
 
 function groupByKey(items, keyExtractor, n, sortByValue) {
@@ -347,4 +360,9 @@ function groupAverageCallDurationByAlarmType(alarms, n) {
         })
         .sort((a, b) => b.value - a.value)
         .slice(0, n);
+}
+
+function resetDistrict() {
+    state.district = undefined;
+    updateApp();
 }
