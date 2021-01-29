@@ -203,7 +203,7 @@ function createBarChart(svgSelector) {
             .attr("width", xscale.bandwidth());
 
         rect.select("title")
-            .text((d) => d.key);
+            .text((d) => `${d.key}: ${d.value}`);
 
         // rotate x-axis labels by 45deg
         svg.selectAll("g.x.axis g text")
