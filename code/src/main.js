@@ -135,6 +135,11 @@ function createMap(filteredAlarms) {
         .on("click", (x, d) => {
             state.district = d.properties.name;
             updateApp();
+        })
+        .append('title')
+        .text(d => {
+            const districtAlarms = groupedAlarms.get(d.properties.name);
+            return `${d.properties.name}${(districtAlarms) ? ": " + districtAlarms.length : ""}`;
         });
 
     // smoother corners
@@ -264,6 +269,8 @@ function createChart(svgSelector, mode) {
                 .join(
                     (enter) => enter.append("path")
                         .classed("line", true)
+                        // enter must return a selection, otherwise d3 will throw an error
+                        // https://github.com/d3/d3-selection/issues/207
                         .call(enter =>
                             enter
                                 .merge(linesContainer)
