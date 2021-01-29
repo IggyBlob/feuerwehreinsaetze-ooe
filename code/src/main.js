@@ -9,7 +9,7 @@ const state = {
 };
 
 function parseDate(dateString) {
-    return moment(dateString, "dd.MM.YYYY HH:mm", "Europe/Vienna");
+    return moment(dateString, "DD.MM.YYYY HH:mm", "Europe/Vienna");
 }
 
 const districtPromise = d3.json("data/bezirke_95_topo.json")
@@ -63,6 +63,7 @@ d3.select("#month").on("change", function () {
 
 const alarmTypeBarChart = createBarChart("#alarmTypeBarChart");
 const mostActiveBrigadesBarChart = createBarChart("#mostActiveBrigadesBarChart");
+const averageCallDurationBarChart = createBarChart("#averageCallDurationBarChart");
 
 function createMap(filteredAlarms) {
 
@@ -177,7 +178,7 @@ function createBarChart(svgSelector) {
 
     function update(new_data) {
         xscale.domain(new_data.map((d) => d.key));
-        yscale.domain([0, d3.max(new_data, (d) => d.count)]);
+        yscale.domain([0, d3.max(new_data, (d) => d.value)]);
 
         g_xaxis.transition().call(xaxis);
         g_yaxis.transition().call(yaxis);
@@ -197,8 +198,8 @@ function createBarChart(svgSelector) {
 
         rect.transition()
             .attr("x", (d) => xscale(d.key))
-            .attr("y", d => yscale(d.count))
-            .attr("height", d => yscale(0) - yscale(d.count))
+            .attr("y", d => yscale(d.value))
+            .attr("height", d => yscale(0) - yscale(d.value))
             .attr("width", xscale.bandwidth());
 
         rect.select("title")
@@ -235,10 +236,12 @@ function updateApp() {
 
     const topAlarmTypes = groupByKey(filteredAlarms, a => a.alarmType, 10);
     const mostActiveBrigades = groupByKey(filteredBrigades, b => b.name, 10);
+    const avgCallDuration = groupAverageCallDurationByAlarmType(filteredAlarms, 20);
 
     createMap(filteredAlarms);
     alarmTypeBarChart(topAlarmTypes);
     mostActiveBrigadesBarChart(mostActiveBrigades);
+    averageCallDurationBarChart(avgCallDuration);
 }
 
 function filterAlarmsData() {
@@ -264,6 +267,23 @@ function groupByKey(items, keyExtractor, n) {
         .sort((a, b) => b[1] - a[1])
         .slice(0, n)
         .map(a => {
-            return {key: a[0], count: a[1]}
+            return {key: a[0], value: a[1]}
         });
+}
+
+function groupAverageCallDurationByAlarmType(alarms, n) {
+    const unorderedMap = new Map();
+    alarms.forEach(alarm => {
+        const key = alarm.alarmType;
+        const value = unorderedMap.get(key) || Object.assign({}, { count: 0, sum: 0.0});
+        value.count += 1;
+        value.sum += alarm.alarmEnd.diff(alarm.alarmStart, 'minutes'); // momentJS
+        unorderedMap.set(key, value);
+    });
+    return [...unorderedMap]
+        .map(e => {
+            return {key: e[0], value: e[1].sum / e[1].count / 60}
+        })
+        .sort((a, b) => b.value - a.value)
+        .slice(0, n);
 }

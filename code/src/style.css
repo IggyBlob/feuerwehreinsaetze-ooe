@@ -86,6 +86,6 @@ rect:hover {
     fill-opacity: 1;
 }
 
-#alarmTypeBarChart, #mostActiveBrigadesBarChart {
+#alarmTypeBarChart, #mostActiveBrigadesBarChart, #averageCallDurationBarChart {
     margin-left: -152px;
 }
