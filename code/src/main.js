@@ -61,9 +61,15 @@ d3.select("#month").on("change", function () {
     updateApp();
 });
 
-const alarmTypeBarChart = createBarChart("#alarmTypeBarChart");
-const mostActiveBrigadesBarChart = createBarChart("#mostActiveBrigadesBarChart");
-const averageCallDurationBarChart = createBarChart("#averageCallDurationBarChart");
+const chartMode = {
+    bar: 1,
+    line: 2
+};
+
+const alarmTypeBarChart = createChart("#alarmTypeBarChart", chartMode.bar);
+const mostActiveBrigadesBarChart = createChart("#mostActiveBrigadesBarChart", chartMode.bar);
+const averageCallDurationBarChart = createChart("#averageCallDurationBarChart", chartMode.bar);
+const alarmsPerDayLineChart = createChart("#alarmsPerDayLineChart", chartMode.line);
 
 function createMap(filteredAlarms) {
 
@@ -145,7 +151,7 @@ function createMap(filteredAlarms) {
         );
 }
 
-function createBarChart(svgSelector) {
+function createChart(svgSelector, mode) {
     const margin = {
         top: 5,
         bottom: 200,
@@ -167,8 +173,15 @@ function createBarChart(svgSelector) {
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
     // scales setup
-    const xscale = d3.scaleBand().rangeRound([0, width]).paddingInner(0.1);
+    let xscale;
     const yscale = d3.scaleLinear().range([height, margin.top]);
+    if (mode === chartMode.bar) {
+        xscale = d3.scaleBand().rangeRound([0, width]).paddingInner(0.1);
+    } else if (mode === chartMode.line) {
+        xscale = d3.scaleTime().range([0, width]);
+    } else {
+        throw "unknown chart mode";
+    }
 
     // axis setup
     const xaxis = d3.axisBottom().scale(xscale);
@@ -176,44 +189,90 @@ function createBarChart(svgSelector) {
     const yaxis = d3.axisLeft().scale(yscale);
     const g_yaxis = g.append("g").attr("class", "y axis");
 
-    function update(new_data) {
-        xscale.domain(new_data.map((d) => d.key));
-        yscale.domain([0, d3.max(new_data, (d) => d.value)]);
+    if (mode === chartMode.line) {
+        const timeFormat = d3.timeFormat("%d");
+        xaxis.tickFormat(timeFormat);
+    }
 
-        g_xaxis.transition().call(xaxis);
-        g_yaxis.transition().call(yaxis);
+    // return update functions depending on chart type
+    if (mode === chartMode.bar) {
+        function update_bar(new_data) {
+            xscale.domain(new_data.map((d) => d.key));
+            yscale.domain([0, d3.max(new_data, (d) => d.value)]);
 
-        const rect = g
-            .selectAll("rect")
-            .data(new_data, (d) => d.key)
-            .join(
-                (enter) => {
-                    const rect_enter = enter.append("rect").attr("y", height);
-                    rect_enter.append("title");
-                    return rect_enter;
-                },
-                (update) => update,
-                (exit) => exit.remove()
-            );
+            g_xaxis.transition().call(xaxis);
+            g_yaxis.transition().call(yaxis);
 
-        rect.transition()
-            .attr("x", (d) => xscale(d.key))
-            .attr("y", d => yscale(d.value))
-            .attr("height", d => yscale(0) - yscale(d.value))
-            .attr("width", xscale.bandwidth());
+            const rect = g
+                .selectAll("rect")
+                .data(new_data, (d) => d.key)
+                .join(
+                    (enter) => {
+                        const rect_enter = enter.append("rect").attr("y", height);
+                        rect_enter.append("title");
+                        return rect_enter;
+                    },
+                    (update) => update,
+                    (exit) => exit.remove()
+                );
+
+            rect.transition()
+                .attr("x", (d) => xscale(d.key))
+                .attr("y", d => yscale(d.value))
+                .attr("height", d => yscale(0) - yscale(d.value))
+                .attr("width", xscale.bandwidth());
 
         rect.select("title")
             .text((d) => `${d.key}: ${d.value}`);
 
-        // rotate x-axis labels by 45deg
-        svg.selectAll("g.x.axis g text")
-            .style("text-anchor", "end")
-            .attr("dx", "-.8em")
-            .attr("dy", ".15em")
-            .attr("transform", "rotate(-45)");
-    }
+            // rotate x-axis labels by 45deg
+            svg.selectAll("g.x.axis g text")
+                .style("text-anchor", "end")
+                .attr("dx", "-.8em")
+                .attr("dy", ".15em")
+                .attr("transform", "rotate(-45)");
+        }
 
-    return update;
+        return update_bar;
+    } else if (mode === chartMode.line) {
+        function update_line(new_data) {
+            xscale.domain(d3.extent(new_data, (d) => moment(d.key)));
+            yscale.domain([0, d3.max(new_data, (d) => d.value)]);
+
+            g_xaxis.transition().call(xaxis);
+            g_yaxis.transition().call(yaxis);
+
+            const line = d3.line()
+                .x(d => xscale(moment(d.key)))
+                .y(d => yscale(d.value));
+
+            const linesContainer = g
+                .selectAll(".line")
+                .data([new_data], (d) => moment(d.key));
+
+            const lines = linesContainer
+                .join(
+                    (enter) => enter.append("path")
+                        .classed("line", true)
+                        .merge(linesContainer)
+                        .transition()
+                        .attr("d", line),
+                    (update) => update,
+                    (exit) => exit.remove()
+                );
+
+            // rotate x-axis labels by 45deg
+            svg.selectAll("g.x.axis g text")
+                .style("text-anchor", "end")
+                .attr("dx", "-.8em")
+                .attr("dy", ".15em")
+                .attr("transform", "rotate(-45)");
+        }
+
+        return update_line;
+    } else {
+        throw "unknown chart mode";
+    }
 }
 
 function groupAlarmsByDistrict(alarms) {
@@ -234,14 +293,16 @@ function updateApp() {
     const filteredAlarms = filterAlarmsData();
     const filteredBrigades = filterBrigadesData();
 
-    const topAlarmTypes = groupByKey(filteredAlarms, a => a.alarmType, 10);
-    const mostActiveBrigades = groupByKey(filteredBrigades, b => b.name, 10);
-    const avgCallDuration = groupAverageCallDurationByAlarmType(filteredAlarms, 20);
+    const topAlarmTypes = groupByKey(filteredAlarms, a => a.alarmType, 10, true);
+    const mostActiveBrigades = groupByKey(filteredBrigades, b => b.name, 10, true);
+    const avgCallDuration = groupAverageCallDurationByAlarmType(filteredAlarms, 20, true);
+    const alarmsPerDay = groupByKey(filteredAlarms, a => a.alarmStart.startOf("day").toISOString(), 31, false);
 
     createMap(filteredAlarms);
     alarmTypeBarChart(topAlarmTypes);
     mostActiveBrigadesBarChart(mostActiveBrigades);
     averageCallDurationBarChart(avgCallDuration);
+    alarmsPerDayLineChart(alarmsPerDay);
 }
 
 function filterAlarmsData() {
@@ -256,7 +317,7 @@ function filterBrigadesData() {
     });
 }
 
-function groupByKey(items, keyExtractor, n) {
+function groupByKey(items, keyExtractor, n, sortByValue) {
     const unorderedMap = new Map();
     items.forEach(item => {
         const key = keyExtractor(item);
@@ -264,7 +325,7 @@ function groupByKey(items, keyExtractor, n) {
         unorderedMap.set(key, value ? value + 1 : 1);
     });
     return [...unorderedMap]
-        .sort((a, b) => b[1] - a[1])
+        .sort((a, b) => (sortByValue) ? b[1] - a[1] : 1)
         .slice(0, n)
         .map(a => {
             return {key: a[0], value: a[1]}
@@ -275,7 +336,7 @@ function groupAverageCallDurationByAlarmType(alarms, n) {
     const unorderedMap = new Map();
     alarms.forEach(alarm => {
         const key = alarm.alarmType;
-        const value = unorderedMap.get(key) || Object.assign({}, { count: 0, sum: 0.0});
+        const value = unorderedMap.get(key) || Object.assign({}, {count: 0, sum: 0.0});
         value.count += 1;
         value.sum += alarm.alarmEnd.diff(alarm.alarmStart, 'minutes'); // momentJS
         unorderedMap.set(key, value);
