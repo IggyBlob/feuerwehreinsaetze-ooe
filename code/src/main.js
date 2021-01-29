@@ -79,6 +79,8 @@ function createMap(filteredAlarms) {
 
     // remove existing paths
     mapElement.selectAll("g").remove();
+    // remove existing pins
+    mapElement.selectAll(".pin").remove();
 
     let groupedAlarms = groupAlarmsByDistrict(filteredAlarms);
     const {min, max} = calcMinMaxOfDistrictGrouping(groupedAlarms);
@@ -114,7 +116,7 @@ function createMap(filteredAlarms) {
         .data(geoData.features)
         .enter()
         .append('path')
-        .classed('.district', true)
+        .classed('district', true)
         .attr("fill", d => color(Number(groupedAlarms.get(d.properties.name).length)))
         .attr('d', path);
 
@@ -129,7 +131,9 @@ function createMap(filteredAlarms) {
     // draw pins of alarms
     svg.selectAll(".pin")
         .data(filteredAlarms)
-        .enter().append("circle", ".pin")
+        .enter()
+        .append("circle")
+        .classed('pin', true)
         .attr("r", 2)
         .attr("transform", (d) =>
             "translate(" + projection([
