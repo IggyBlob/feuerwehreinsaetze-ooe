@@ -232,8 +232,8 @@ function createChart(svgSelector, mode) {
                 .attr("height", d => yscale(0) - yscale(d.value))
                 .attr("width", xscale.bandwidth());
 
-        rect.select("title")
-            .text((d) => `${d.key}: ${d.value}`);
+            rect.select("title")
+                .text((d) => `${d.key}: ${d.value}`);
 
             // rotate x-axis labels by 45deg
             svg.selectAll("g.x.axis g text")
@@ -264,9 +264,11 @@ function createChart(svgSelector, mode) {
                 .join(
                     (enter) => enter.append("path")
                         .classed("line", true)
-                        .merge(linesContainer)
-                        .transition()
-                        .attr("d", line),
+                        .call(enter =>
+                            enter
+                                .merge(linesContainer)
+                                .transition()
+                                .attr("d", line)),
                     (update) => update,
                     (exit) => exit.remove()
                 );
