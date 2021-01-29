@@ -61,7 +61,8 @@ d3.select("#month").on("change", function () {
     updateApp();
 });
 
-const alarmTypeHistogram = createHistogram("#alarmTypeHistogram");
+const alarmTypeBarChart = createBarChart("#alarmTypeBarChart");
+const mostActiveBrigadesBarChart = createBarChart("#mostActiveBrigadesBarChart");
 
 function createMap(filteredAlarms) {
 
@@ -143,7 +144,7 @@ function createMap(filteredAlarms) {
         );
 }
 
-function createHistogram(svgSelector) {
+function createBarChart(svgSelector) {
     const margin = {
         top: 5,
         bottom: 200,
@@ -175,7 +176,7 @@ function createHistogram(svgSelector) {
     const g_yaxis = g.append("g").attr("class", "y axis");
 
     function update(new_data) {
-        xscale.domain(new_data.map((d) => d.alarmType));
+        xscale.domain(new_data.map((d) => d.key));
         yscale.domain([0, d3.max(new_data, (d) => d.count)]);
 
         g_xaxis.transition().call(xaxis);
@@ -183,7 +184,7 @@ function createHistogram(svgSelector) {
 
         const rect = g
             .selectAll("rect")
-            .data(new_data, (d) => d.alarmType)
+            .data(new_data, (d) => d.key)
             .join(
                 (enter) => {
                     const rect_enter = enter.append("rect").attr("y", height);
@@ -195,13 +196,13 @@ function createHistogram(svgSelector) {
             );
 
         rect.transition()
-            .attr("x", (d) => xscale(d.alarmType))
+            .attr("x", (d) => xscale(d.key))
             .attr("y", d => yscale(d.count))
             .attr("height", d => yscale(0) - yscale(d.count))
             .attr("width", xscale.bandwidth());
 
         rect.select("title")
-            .text((d) => d.alarmType);
+            .text((d) => d.key);
 
         // rotate x-axis labels by 45deg
         svg.selectAll("g.x.axis g text")
@@ -232,10 +233,12 @@ function updateApp() {
     const filteredAlarms = filterAlarmsData();
     const filteredBrigades = filterBrigadesData();
 
-    const topAlarmTypes = groupAlarmsByType(filteredAlarms, 10);
+    const topAlarmTypes = groupByKey(filteredAlarms, a => a.alarmType, 10);
+    const mostActiveBrigades = groupByKey(filteredBrigades, b => b.name, 10);
 
     createMap(filteredAlarms);
-    alarmTypeHistogram(topAlarmTypes)
+    alarmTypeBarChart(topAlarmTypes);
+    mostActiveBrigadesBarChart(mostActiveBrigades);
 }
 
 function filterAlarmsData() {
@@ -250,10 +253,10 @@ function filterBrigadesData() {
     });
 }
 
-function groupAlarmsByType(filteredAlarms, n) {
+function groupByKey(items, keyExtractor, n) {
     const unorderedMap = new Map();
-    filteredAlarms.forEach(item => {
-        const key = item.alarmType;
+    items.forEach(item => {
+        const key = keyExtractor(item);
         const value = unorderedMap.get(key);
         unorderedMap.set(key, value ? value + 1 : 1);
     });
@@ -261,6 +264,6 @@ function groupAlarmsByType(filteredAlarms, n) {
         .sort((a, b) => b[1] - a[1])
         .slice(0, n)
         .map(a => {
-            return {alarmType: a[0], count: a[1]}
+            return {key: a[0], count: a[1]}
         });
 }

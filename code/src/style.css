@@ -86,6 +86,6 @@ rect:hover {
     fill-opacity: 1;
 }
 
-#alarmTypeHistogram {
+#alarmTypeBarChart, #mostActiveBrigadesBarChart {
     margin-left: -152px;
 }
