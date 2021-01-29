@@ -127,3 +127,12 @@ rect:hover {
 #mostActiveBrigadesBarChart {
     z-index: 1;
 }
+
+#tooltip {
+    position: absolute;
+    padding: 5px;
+    fill: black;
+    background-color: white;
+    border: 1px solid black;
+    font-size: 12px;
+}

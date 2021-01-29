@@ -1,6 +1,9 @@
 // store main element for later
 const mapElement = d3.select('#map');
 
+// store tooltip element
+const tooltip = d3.select('#tooltip');
+
 const state = {
     topology: [],
     alarmsData: [],
@@ -250,7 +253,40 @@ function createChart(svgSelector, mode) {
 
         return update_bar;
     } else if (mode === chartMode.line) {
+        const tooltipLine = g.append("line");
+        const tipBox = g
+            .append("rect")
+            .attr("class", ".tipbox")
+            .attr('width', width)
+            .attr('height', height)
+            .attr('opacity', 0);
+
         function update_line(new_data) {
+            tipBox
+                .on('mousemove', drawTooltip)
+                .on('mouseleave', removeTooltip);
+
+            function drawTooltip(event) {
+                const date = moment(xscale.invert(d3.pointer(event, tipBox.node())[0])).startOf("day");
+                const alarmsValue = new_data.find(elem => elem.key === date.toISOString());
+
+                tooltipLine.attr('stroke', 'black')
+                    .attr('x1', xscale(date))
+                    .attr('x2', xscale(date))
+                    .attr('y1', 0)
+                    .attr('y2', height);
+
+                tooltip.html(`${date.format("DD.MM.YYYY")}: ${alarmsValue.value}`)
+                    .style('display', 'block')
+                    .style('left', event.pageX + 20 + 'px')
+                    .style('top', event.pageY - 20 + 'px');
+            }
+
+            function removeTooltip() {
+                tooltipLine.attr("stroke", "none");
+                tooltip.style("display", "none");
+            }
+
             xscale.domain(d3.extent(new_data, (d) => moment(d.key)));
             yscale.domain([0, d3.max(new_data, (d) => d.value)]);
 
@@ -286,6 +322,10 @@ function createChart(svgSelector, mode) {
                 .attr("dx", "-.8em")
                 .attr("dy", ".15em")
                 .attr("transform", "rotate(-45)");
+
+            // raise tooltip elements to the front of the svg
+            tooltipLine.raise();
+            tipBox.raise();
         }
 
         return update_line;
