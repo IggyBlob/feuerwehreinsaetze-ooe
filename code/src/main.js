@@ -64,10 +64,24 @@ d3.select("#month").on("change", function () {
 const alarmTypeHistogram = createHistogram("#alarmTypeHistogram");
 
 function createMap(filteredAlarms) {
+
+    function calcMinMaxOfDistrictGrouping(groupedAlarms) {
+        let min = Number.MAX_VALUE;
+        let max = Number.MIN_VALUE;
+
+        for (const [_, value] of groupedAlarms) {
+            min = Math.min(min, value.length);
+            max = Math.max(max, value.length);
+        }
+
+        return {min, max};
+    }
+
     // remove existing paths
     mapElement.selectAll("g").remove();
 
     let groupedAlarms = groupAlarmsByDistrict(filteredAlarms);
+    const {min, max} = calcMinMaxOfDistrictGrouping(groupedAlarms);
 
     let topology = state.topology;
 
@@ -85,29 +99,44 @@ function createMap(filteredAlarms) {
     const path = d3.geoPath()
         .projection(projection);
 
+    // define linear red color scale
     const color = d3.scaleLinear()
-        .domain([Math.min(...groupedAlarms.values()), Math.max(...groupedAlarms.values())])
+        .domain([min, max])
         .range(["#fee5d9", "#a50f15"]);
 
     const svg = mapElement
         .attr('height', height)
         .attr('width', width);
 
+    // draw map and colorize districts
     svg.append("g")
-        .selectAll('.county')
+        .selectAll('.district')
         .data(geoData.features)
         .enter()
         .append('path')
-        .classed('.county', true)
-        .attr("fill", d => color(Number(groupedAlarms.get(d.properties.name))))
+        .classed('.district', true)
+        .attr("fill", d => color(Number(groupedAlarms.get(d.properties.name).length)))
         .attr('d', path);
 
+    // smoother corners
     svg.append('path')
         .datum(topojson.mesh(topology, topology.objects.bezirke, (a, b) => a !== b))
         .attr("fill", "none")
         .attr("stroke", "white")
         .attr("stroke-linejoin", "round")
         .attr("d", path);
+
+    // draw pins of alarms
+    svg.selectAll(".pin")
+        .data(filteredAlarms)
+        .enter().append("circle", ".pin")
+        .attr("r", 2)
+        .attr("transform", (d) =>
+            "translate(" + projection([
+                d.longitude,
+                d.latitude
+            ]) + ")"
+        );
 }
 
 function createHistogram(svgSelector) {
@@ -185,11 +214,11 @@ function groupAlarmsByDistrict(alarms) {
     const map = new Map();
     alarms.forEach(item => {
         const key = item.district;
-        const value = map.get(key);
-        if (!value) {
-            map.set(key, 1);
+        const collection = map.get(key);
+        if (!collection) {
+            map.set(key, [item]);
         } else {
-            map.set(key, value + 1);
+            collection.push(item)
         }
     });
     return map;
@@ -227,5 +256,7 @@ function groupAlarmsByType(filteredAlarms, n) {
     return [...unorderedMap]
         .sort((a, b) => b[1] - a[1])
         .slice(0, n)
-        .map(a => { return {alarmType: a[0], count: a[1]} });
+        .map(a => {
+            return {alarmType: a[0], count: a[1]}
+        });
 }
