@@ -4,6 +4,9 @@ const mapElement = d3.select('#map');
 // store tooltip element
 const tooltip = d3.select('#tooltip');
 
+const spinner = d3.select('#spinner');
+const monthSelection = d3.select('#month');
+
 const state = {
     topology: [],
     alarmsData: [],
@@ -58,7 +61,11 @@ const brigadePromise = d3.dsv(";", "data/brigades-splitted.csv")
     });
 
 Promise.all([districtPromise, alarmsPromise, brigadePromise])
-    .then(_ => updateApp());
+    .then(_ => {
+        spinner.style("display", "none");
+        monthSelection.attr("disabled", null);
+        updateApp();
+    });
 
 d3.select("#month").on("change", function () {
     state.month = parseInt(d3.select(this).property("value"));
