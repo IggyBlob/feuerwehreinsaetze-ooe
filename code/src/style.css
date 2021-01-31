@@ -127,8 +127,12 @@ rect:hover {
     z-index: 2;
 }
 
-#mostActiveBrigadesBarChart {
+#averageCallDurationBarChart {
     z-index: 1;
+}
+
+#alarmsPerDayLineChart {
+    z-index: 0;
 }
 
 #tooltip {
