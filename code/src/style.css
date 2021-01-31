@@ -25,6 +25,8 @@ header {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
+    background-color: rgba(255, 255, 255, .8);
+    position: fixed;
 }
 
 .heading h1, .heading h2 {
@@ -44,6 +46,7 @@ header {
 #map-section {
     display: flex;
     flex-direction: column;
+    margin-top: 137px; /* header height */
 }
 
 #map {
